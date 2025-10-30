@@ -16,11 +16,21 @@
 
     <div id="error" class="error"></div>
 
-    <div id="videoInfo" style="display: none;">
-      <img id="thumbnail" src="" alt="Video thumbnail" />
-      <h2 id="title"></h2>
-      <p>By: <span id="author"></span> • <span id="views"></span> views</p>
-      <div id="formats"></div>
+    <!-- Main content: Left = thumbnail, Right = info + download -->
+    <div id="videoInfo" class="video-info-container" style="display: none;">
+      <div class="thumbnail-section">
+        <img id="thumbnail" src="" alt="Video thumbnail" />
+      </div>
+      <div class="info-section">
+        <h2 id="title">Video Title</h2>
+        <p><strong>Channel:</strong> <span id="author">Author</span></p>
+        <p><strong>Views:</strong> <span id="views">0</span></p>
+
+        <h3>📥 Download Options</h3>
+        <div id="downloadOptions">
+          <!-- Will be filled by JS: 360p, 480p, etc. -->
+        </div>
+      </div>
     </div>
   </div>
 
