@@ -1,5 +1,6 @@
 document.getElementById('fetchBtn').addEventListener('click', async () => {
-  const url = document.getElementById('videoUrl').value.trim();
+  const input = document.getElementById('videoUrl');
+  const url = input.value.trim();
   const errorDiv = document.getElementById('error');
   const videoInfoDiv = document.getElementById('videoInfo');
 
@@ -14,17 +15,25 @@ document.getElementById('fetchBtn').addEventListener('click', async () => {
   try {
     const response = await fetch('/api/fetch-video', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }), // ← correct format
     });
+
+    // Even if status is 500, we want to read JSON (not throw on non-2xx)
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Server returned non-JSON response. Check server logs.');
+    }
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Unknown error');
+      throw new Error(data.error || 'Unknown server error');
     }
 
-    // Display info
+    // Success: render data
     document.getElementById('thumbnail').src = data.thumbnail;
     document.getElementById('title').textContent = data.title;
     document.getElementById('author').textContent = data.author;
@@ -33,8 +42,8 @@ document.getElementById('fetchBtn').addEventListener('click', async () => {
     const formatsDiv = document.getElementById('formats');
     formatsDiv.innerHTML = '';
 
-    if (data.formats.length === 0) {
-      formatsDiv.innerHTML = '<p>No downloadable MP4 streams available.</p>';
+    if (!data.formats || data.formats.length === 0) {
+      formatsDiv.innerHTML = '<p>No downloadable MP4 streams found.</p>';
     } else {
       data.formats.forEach((fmt) => {
         const div = document.createElement('div');
@@ -49,6 +58,7 @@ document.getElementById('fetchBtn').addEventListener('click', async () => {
 
     videoInfoDiv.style.display = 'block';
   } catch (err) {
-    errorDiv.textContent = 'Error: ' + err.message;
+    console.error('Fetch error:', err);
+    errorDiv.textContent = 'Error: ' + (err.message || 'Failed to fetch video info.');
   }
 });
