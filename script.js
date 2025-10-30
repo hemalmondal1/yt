@@ -5,7 +5,6 @@ document.getElementById('fetchBtn').addEventListener('click', async () => {
   const videoInfoDiv = document.getElementById('videoInfo');
   const fetchBtn = document.getElementById('fetchBtn');
 
-  // Reset UI
   errorDiv.textContent = '';
   errorDiv.classList.remove('show');
   videoInfoDiv.style.display = 'none';
@@ -14,8 +13,7 @@ document.getElementById('fetchBtn').addEventListener('click', async () => {
 
   if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
     showError('Please enter a valid YouTube URL.');
-    fetchBtn.disabled = false;
-    fetchBtn.textContent = 'Fetch Video Info';
+    resetButton();
     return;
   }
 
@@ -28,41 +26,84 @@ document.getElementById('fetchBtn').addEventListener('click', async () => {
 
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
-      throw new Error('Server returned invalid response. Check logs.');
+      throw new Error('Server returned invalid response.');
     }
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Unknown error from server');
+      throw new Error(data.error || 'Unknown server error');
     }
 
-    // Populate video info
+    // Update UI
     document.getElementById('thumbnail').src = data.thumbnail;
     document.getElementById('title').textContent = data.title;
     document.getElementById('author').textContent = data.author;
     document.getElementById('views').textContent = new Intl.NumberFormat().format(data.views);
 
-    // Render formats
-    const formatsDiv = document.getElementById('formats');
-    formatsDiv.innerHTML = '';
+    // Build download options for specific qualities
+    const desiredQualities = ['360p', '480p', '720p', '1080p'];
+    const qualityMap = {};
 
-    if (!data.formats || data.formats.length === 0) {
-      formatsDiv.innerHTML = '<p>No downloadable MP4 streams available.</p>';
-    } else {
-      data.formats.forEach(fmt => {
-        const div = document.createElement('div');
-        div.className = 'format-item';
-        div.innerHTML = `
-          <strong>${fmt.quality}</strong> ${fmt.size ? `· ~${fmt.size} MB` : ''}
-          <br>
-          <a href="${fmt.url}" target="_blank" rel="noopener" download>Download Video</a>
-        `;
-        formatsDiv.appendChild(div);
-      });
+    // Map available streams by quality label
+    for (const fmt of data.formats || []) {
+      if (fmt.quality && fmt.url) {
+        // Normalize quality (e.g., "720p60" → "720p")
+        let cleanQuality = fmt.quality;
+        if (cleanQuality.endsWith('p60') || cleanQuality.endsWith('p30')) {
+          cleanQuality = cleanQuality.slice(0, -2); // remove frame rate
+        }
+        if (desiredQualities.includes(cleanQuality)) {
+          // Prefer larger file (higher bitrate) if duplicate quality
+          if (!qualityMap[cleanQuality] || (fmt.size && (!qualityMap[cleanQuality].size || fmt.size > qualityMap[cleanQuality].size))) {
+            qualityMap[cleanQuality] = fmt;
+          }
+        }
+      }
     }
 
-    videoInfoDiv.style.display = 'block';
+    // Render download buttons
+    const downloadOptions = document.getElementById('downloadOptions');
+    downloadOptions.innerHTML = '';
+
+    let hasAny = false;
+    for (const q of desiredQualities) {
+      if (qualityMap[q]) {
+        hasAny = true;
+        const div = document.createElement('div');
+        div.className = 'download-option';
+        div.innerHTML = `
+          <div>
+            <div class="quality">${q}</div>
+            <div class="size">${qualityMap[q].size ? `~${qualityMap[q].size} MB` : ''}</div>
+          </div>
+          <a class="download-btn" href="${qualityMap[q].url}" target="_blank" rel="noopener" download>Download</a>
+        `;
+        downloadOptions.appendChild(div);
+      }
+    }
+
+    if (!hasAny) {
+      downloadOptions.innerHTML = '<p>No standard resolutions (360p–1080p) available for download.</p>';
+    }
+
+    videoInfoDiv.style.display = 'flex';
   } catch (err) {
-    console.error('Error:', err);
-    showError(err.message || 'Failed to fetch video info
+    console.error('Fetch error:', err);
+    showError(err.message || 'Failed to load video info.');
+  } finally {
+    resetButton();
+  }
+});
+
+function resetButton() {
+  const btn = document.getElementById('fetchBtn');
+  btn.disabled = false;
+  btn.textContent = 'Fetch Video Info';
+}
+
+function showError(message) {
+  const errorDiv = document.getElementById('error');
+  errorDiv.textContent = `❌ ${message}`;
+  errorDiv.classList.add('show');
+}
