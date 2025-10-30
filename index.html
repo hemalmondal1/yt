@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>YouTube Video Downloader</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>YouTube Video Info & Downloader</h1>
+    <input type="text" id="videoUrl" placeholder="Paste YouTube URL here" />
+    <button id="fetchBtn">Fetch Video Info</button>
+
+    <div id="videoInfo" style="display: none;">
+      <img id="thumbnail" src="" alt="Thumbnail" />
+      <h2 id="title"></h2>
+      <p>By: <span id="author"></span> • <span id="views"></span> views</p>
+      <div id="formats"></div>
+    </div>
+
+    <div id="error" class="error"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
