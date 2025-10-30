@@ -1,39 +1,52 @@
 // api/fetch-video.js
-import { NextRequest } from 'next/server';
 import playdl from 'play-dl';
 
-export const config = {
-  runtime: 'nodejs',
-  maxDuration: 10, // seconds (Vercel free tier limit)
-};
+// Disable cookies to avoid age-restriction issues
+playdl.setToken({
+  cookie: '',
+});
 
 export default async function handler(req, res) {
+  // Always set JSON response header
+  res.setHeader('Content-Type', 'application/json');
+
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
   }
 
-  const { url } = req.body;
+  let url;
+  try {
+    // Parse body safely
+    const body = JSON.parse(req.body || '{}');
+    url = body.url;
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid JSON in request body.' });
+  }
 
-  if (!url) {
-    return res.status(400).json({ error: 'URL is required' });
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'Missing or invalid "url" field.' });
+  }
+
+  // Basic URL validation
+  if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+    return res.status(400).json({ error: 'Not a YouTube URL.' });
   }
 
   try {
-    // Validate and fetch video info
+    // Validate with play-dl
     if (!playdl.validate(url, 'yt_video')) {
-      return res.status(400).json({ error: 'Invalid YouTube URL' });
+      return res.status(400).json({ error: 'Invalid YouTube video URL.' });
     }
 
     const video = await playdl.video_info(url);
     const formats = [];
 
-    // Get downloadable streams (video + audio)
-    for (const format of video.video_details.formats) {
+    for (const format of video.video_details.formats || []) {
       if (
         format.mimeType?.includes('video/mp4') &&
         format.hasVideo &&
         format.hasAudio &&
-        format.url // direct download URL
+        format.url
       ) {
         formats.push({
           url: format.url,
@@ -43,18 +56,25 @@ export default async function handler(req, res) {
       }
     }
 
-    // Sort by quality (highest first)
-    formats.sort((a, b) => (b.quality || '').localeCompare(a.quality || ''));
+    formats.sort((a, b) => {
+      const aQ = parseInt(a.quality) || 0;
+      const bQ = parseInt(b.quality) || 0;
+      return bQ - aQ;
+    });
 
     res.status(200).json({
       title: video.video_details.title,
-      author: video.video_details.channel.name,
-      thumbnail: video.video_details.thumbnails[0]?.url,
-      views: video.video_details.views,
-      formats: formats.slice(0, 5), // limit to top 5
+      author: video.video_details.channel?.name || 'Unknown',
+      thumbnail: video.video_details.thumbnails?.[0]?.url || '',
+      views: video.video_details.views || 0,
+      formats: formats.slice(0, 5),
     });
   } catch (err) {
-    console.error('Fetch error:', err.message);
-    res.status(500).json({ error: 'Failed to fetch video data. Video may be restricted.' });
+    console.error('Server error:', err.message || err);
+
+    // ALWAYS return JSON — never let Vercel show HTML error
+    res.status(500).json({
+      error: 'Failed to process video. It may be age-restricted, private, or unavailable.',
+    });
   }
 }
