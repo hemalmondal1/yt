@@ -8,18 +8,20 @@
 </head>
 <body>
   <div class="container">
-    <h1>YouTube Video Info & Downloader</h1>
-    <input type="text" id="videoUrl" placeholder="Paste YouTube URL here" />
+    <h1>🎥 YouTube Video Downloader</h1>
+    <p>Enter a public YouTube video URL to fetch info and download links.</p>
+    
+    <input type="text" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." />
     <button id="fetchBtn">Fetch Video Info</button>
 
+    <div id="error" class="error"></div>
+
     <div id="videoInfo" style="display: none;">
-      <img id="thumbnail" src="" alt="Thumbnail" />
+      <img id="thumbnail" src="" alt="Video thumbnail" />
       <h2 id="title"></h2>
       <p>By: <span id="author"></span> • <span id="views"></span> views</p>
       <div id="formats"></div>
     </div>
-
-    <div id="error" class="error"></div>
   </div>
 
   <script src="script.js"></script>
