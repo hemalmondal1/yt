@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>YouTube Downloader</title>
+  <title>YouTube Video Downloader</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -156,7 +156,7 @@
       }
 
       try {
-        // 🔥 UPDATE THIS TO YOUR SERVER IP
+        // 🔥 Connects to YOUR Linux server
         const API_URL = 'http://103.47.226.14:3000/api/fetch-video';
 
         const response = await fetch(API_URL, {
@@ -168,29 +168,31 @@
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || 'Unknown server error');
+          throw new Error(data.error || 'Failed to fetch video data.');
         }
 
+        // Update UI
         document.getElementById('thumbnail').src = data.thumbnail;
         document.getElementById('title').textContent = data.title;
         document.getElementById('author').textContent = data.author;
         document.getElementById('views').textContent = new Intl.NumberFormat().format(data.views);
 
+        // Render download buttons
         const downloadOptions = document.getElementById('downloadOptions');
         downloadOptions.innerHTML = '';
 
-        const desired = ['360p', '480p', '720p', '1080p'];
+        const desiredQualities = ['360p', '480p', '720p', '1080p'];
         let hasAny = false;
 
-        for (const q of desired) {
-          const fmt = data.formats.find(f => f.quality === q);
+        for (const quality of desiredQualities) {
+          const fmt = data.formats.find(f => f.quality === quality);
           if (fmt) {
             hasAny = true;
             const div = document.createElement('div');
             div.className = 'download-option';
             div.innerHTML = `
               <div>
-                <div class="quality">${q}</div>
+                <div class="quality">${quality}</div>
                 <div>${fmt.size ? `~${fmt.size} MB` : ''}</div>
               </div>
               <a class="download-btn" href="${fmt.url}" target="_blank" rel="noopener" download>Download</a>
@@ -200,13 +202,13 @@
         }
 
         if (!hasAny) {
-          downloadOptions.innerHTML = '<p>No MP4 downloads available for this video.</p>';
+          downloadOptions.innerHTML = '<p>No MP4 download available for this video.</p>';
         }
 
         videoInfoDiv.style.display = 'flex';
       } catch (err) {
         console.error('Error:', err);
-        showError(err.message || 'Failed to fetch video.');
+        showError(err.message || 'Could not connect to the server.');
       } finally {
         resetBtn();
       }
